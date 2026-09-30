@@ -1,4 +1,4 @@
-def guardar_en_sql(df, nombre_tabla, modo="overwrite"):
+def guardar_en_sql(df, nombre_tabla, modo="overwrite"): #(Se utilizó la ayuda de gemini para esta función)
     url = "jdbc:mysql://localhost:3306/IBEX35"
     
     propiedades = {

@@ -1,7 +1,7 @@
 import os
 from pyspark.sql import SparkSession
 
-def get_spark_session():
+def get_spark_session(): #(Se utilizó la ayuda de gemini para esta función)
     config_dir = os.path.dirname(os.path.abspath(__file__))
     
     base_dir = os.path.dirname(config_dir)
