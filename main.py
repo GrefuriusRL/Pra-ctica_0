@@ -2,11 +2,11 @@ import os
 from pyspark.sql import functions as F
 from pyspark.sql import Window
 from pyspark.sql.types import StructType, StructField, StringType, DoubleType, DateType
-from spark_session import get_spark_session
+from config.spark_session import get_spark_session
 from jdbc_connector import guardar_en_sql
 
 spark = get_spark_session()
-csv_loc = "ibex35_close-2024.csv"
+csv_loc = "./models/ibex35_close-2024.csv"
 
 
 # ==========================================
@@ -143,3 +143,85 @@ total_dias = df_ej2a.count()
 
 print("\nDías con información disponible: ",total_dias)
 print("\nEl número de días es inferior al año por los fines de semana y festivos pero no es necesario buscar mas datos ya que en esos dias la bolsa no es afectada")
+
+# ==========================================
+# Ej3
+# ==========================================
+
+print("\nEj3")
+#Renombrar Fecha a Dia
+df_ej3 = df_ej2a.withColumnRenamed("Fecha", "Dia")
+df_ej3.show(10)
+
+# Media, Máximo y Mínimo
+for empresa in empresas:
+    mmm = df_ej3.select(
+        F.avg(F.col(empresa)).alias("Media anual"),
+        F.max(F.col(empresa)).alias("Max anual"),
+        F.min(F.col(empresa)).alias("Min anual")
+    )
+    print(f"--- Para {empresa} ---")
+    mmm.show()
+
+# Columna Deficiency Notice UNI
+col_uni = "UNI" if "UNI" in empresas else empresas[0]
+df_ej3 = df_ej3.withColumn(
+    "Deficiency Notice UNI",
+    F.when(F.col(col_uni) < 1.0, True).otherwise(False)
+)
+df_ej3.show(100)
+
+
+# ==========================================
+# Ej4
+# ==========================================
+print("\nEj4")
+#Calcula Variación Anual
+fecha_min = df_ej3.select(F.min("Dia")).collect()[0][0]
+fecha_max = df_ej3.select(F.max("Dia")).collect()[0][0]
+
+for empresa in empresas:
+    val_inicial = df_ej3.filter(F.col("Dia") == fecha_min).select(empresa).collect()[0][0]
+    val_final = df_ej3.filter(F.col("Dia") == fecha_max).select(empresa).collect()[0][0]
+    
+    if val_inicial is not None and val_final is not None:
+        variacion = ((val_final - val_inicial) / val_inicial) * 100
+        
+        if variacion <= -15:
+            clasificacion = "Bajada Fuerte"
+        elif variacion < -1:
+            clasificacion = "Bajada"
+        elif -1 <= variacion <= 1:
+            clasificacion = "Neutra"
+        elif variacion < 15:
+            clasificacion = "Subida"
+        else:
+            clasificacion = "Subida Fuerte"
+            
+        print(f"\nEmpresa: {empresa} -- Variación: {variacion:.2f}% -- Clasificación: {clasificacion}")
+
+# ==========================================
+# Ej5
+# ==========================================
+print("\nEj5")
+df_ej5 = df_ej3
+
+for empresa in empresas:
+    q1, q2, q3 = df_ej5.approxQuantile(empresa, [0.25, 0.50, 0.75], 0.01)
+    
+    columna = f"{empresa} Cuartil"
+    df_ej5 = df_ej5.withColumn(
+        columna,
+        F.when(F.col(empresa) <= q1, "q1")
+         .when((F.col(empresa) > q1) & (F.col(empresa) <= q2), "q2")
+         .when((F.col(empresa) > q2) & (F.col(empresa) <= q3), "q3")
+         .otherwise("q4")
+    )
+
+print("\nPrimera fila:")
+df_ej5.show(1)
+
+print("\nColumna AENA y BBVA:")
+cols = ["Dia"] + [c for c in df_ej5.columns if "AENA" in c.upper() or "BBVA" in c.upper()]
+df_ej5.select(cols).show(truncate=False)
+
