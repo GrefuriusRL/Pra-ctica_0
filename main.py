@@ -3,10 +3,10 @@ from pyspark.sql import functions as F
 from pyspark.sql import Window
 from pyspark.sql.types import StructType, StructField, StringType, DoubleType, DateType
 from config.spark_session import get_spark_session
-from jdbc_connector import guardar_en_sql
+from models.jdbc_connector import guardar_en_sql
 
 spark = get_spark_session()
-csv_loc = "./models/ibex35_close-2024.csv"
+csv_loc = "./data/ibex35_close-2024.csv"
 
 
 # ==========================================
@@ -225,3 +225,11 @@ print("\nColumna AENA y BBVA:")
 cols = ["Dia"] + [c for c in df_ej5.columns if "AENA" in c.upper() or "BBVA" in c.upper()]
 df_ej5.select(cols).show(truncate=False)
 
+# ==========================================
+# Guardar en Base de Datos SQL via JDBC
+# ==========================================
+#Almacena los datos del CSV en la tabla Datos2024
+guardar_en_sql(df_i, nombre_tabla="Datos2024", modo="overwrite")
+
+#Almacenar los datos tratados
+guardar_en_sql(df_ej5, nombre_tabla="Datos2024", modo="overwrite")
