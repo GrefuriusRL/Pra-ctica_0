@@ -36,3 +36,7 @@ siguiendo estos comandos si se abre una terminal y se viaja a la carpeta src se 
 
 conda activate mineriadedatos2026
 python main.py
+
+
+
+GITHUB
